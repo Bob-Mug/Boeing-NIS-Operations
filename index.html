@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boeing NIS - Executive Dashboard</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        boeing: {
+                            blue: '#0033A0',
+                            lightblue: '#0055B8',
+                            gray: '#E6E9EB',
+                            darkgray: '#4A4A4A'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800 antialiased flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-boeing-blue text-white flex flex-col shadow-xl z-20">
+        <div class="p-6 flex items-center space-x-3 border-b border-blue-800">
+            <!-- Simplified Boeing-esque logo/icon -->
+            <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-boeing-blue font-bold text-xl">
+                <i class="fa-solid fa-plane-up"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wider">BOEING</h1>
+                <p class="text-xs text-blue-200">NIS Operations</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 py-6 px-4 space-y-2">
+            <button onclick="switchTab('wan-tab')" id="btn-wan-tab" class="w-full flex items-center space-x-3 px-4 py-3 bg-blue-800 rounded-lg text-left transition-colors duration-200">
+                <i class="fa-solid fa-network-wired w-5 text-center"></i>
+                <span class="font-medium">WAN & Outages</span>
+            </button>
+            <button onclick="switchTab('itsm-tab')" id="btn-itsm-tab" class="w-full flex items-center space-x-3 px-4 py-3 hover:bg-blue-800 rounded-lg text-left transition-colors duration-200 text-blue-100">
+                <i class="fa-solid fa-ticket w-5 text-center"></i>
+                <span class="font-medium">ServiceNow ITSM</span>
+            </button>
+            <button onclick="switchTab('projects-tab')" id="btn-projects-tab" class="w-full flex items-center space-x-3 px-4 py-3 hover:bg-blue-800 rounded-lg text-left transition-colors duration-200 text-blue-100">
+                <i class="fa-solid fa-list-check w-5 text-center"></i>
+                <span class="font-medium">Project Portfolio</span>
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-blue-800 text-sm text-blue-200">
+            <p>Data refreshed: <span id="refresh-time" class="font-semibold text-white">Just now</span></p>
+            <p class="mt-1 text-xs">Exec View - Confidential</p>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden">
+        
+        <!-- Header -->
+        <header class="bg-white shadow-sm py-4 px-8 flex justify-between items-center z-10">
+            <div class="flex items-center space-x-4">
+                <h2 id="current-tab-title" class="text-2xl font-semibold text-gray-800">WAN Services & Outage Dashboard</h2>
+                <span class="hidden md:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                    <span class="w-2 h-2 rounded-full bg-yellow-500 mr-2 animate-pulse"></span>
+                    Overall Health: Degraded
+                </span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <input type="text" placeholder="Search resources..." class="bg-gray-100 border-none rounded-full py-2 px-4 pl-10 focus:ring-2 focus:ring-boeing-lightblue focus:outline-none text-sm w-64">
+                    <i class="fa-solid fa-search absolute left-3 top-2.5 text-gray-400"></i>
+                </div>
+                <button class="p-2 text-gray-400 hover:text-gray-600 relative">
+                    <i class="fa-regular fa-bell text-xl"></i>
+                    <span class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                </button>
+                <div class="h-8 w-8 rounded-full bg-boeing-lightblue text-white flex items-center justify-center font-semibold">
+                    JD
+                </div>
+            </div>
+        </header>
+
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto p-8">
+
+            <!-- ==================== WAN SERVICES TAB ==================== -->
+            <div id="wan-tab" class="tab-content active space-y-6">
+                
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Active Circuits -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-boeing-blue">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Total Active Circuits</p>
+                                <h3 class="text-3xl font-bold text-gray-800">1,248</h3>
+                            </div>
+                            <div class="p-2 bg-blue-50 rounded-lg text-boeing-blue">
+                                <i class="fa-solid fa-satellite-dish"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-green-600 mt-4 flex items-center"><i class="fa-solid fa-arrow-up mr-1"></i> 2% vs last month</p>
+                    </div>
+
+                    <!-- Redundancy -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-yellow-400">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Circuits Lacking Redundancy (SPOF)</p>
+                                <h3 class="text-3xl font-bold text-gray-800">142</h3>
+                            </div>
+                            <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-red-500 mt-4 font-medium">11.3% of total network risk</p>
+                    </div>
+
+                    <!-- Monthly Spend -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Monthly WAN Spend</p>
+                                <h3 class="text-3xl font-bold text-gray-800">$4.2M</h3>
+                            </div>
+                            <div class="p-2 bg-green-50 rounded-lg text-green-600">
+                                <i class="fa-solid fa-dollar-sign px-1"></i>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mt-4">
+                            <p class="text-xs text-green-600 flex items-center"><i class="fa-solid fa-arrow-down mr-1"></i> 1.5% overall</p>
+                            <p class="text-xs text-gray-500 font-medium border-l border-gray-200 pl-2">Avg: $3.45 / Mbps</p>
+                        </div>
+                    </div>
+
+                    <!-- Open Outages -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-red-500">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Active P1/P2 Outages</p>
+                                <h3 class="text-3xl font-bold text-gray-800">3</h3>
+                            </div>
+                            <div class="p-2 bg-red-50 rounded-lg text-red-600">
+                                <i class="fa-solid fa-plug-circle-xmark"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-4">Avg. MTTR (Current Month): 4.2 hrs</p>
+                    </div>
+                </div>
+
+                <!-- Charts Row 1 -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Spend by Carrier -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 lg:col-span-1 border border-gray-100">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-4">Spend & Disposition by Carrier</h4>
+                        <div class="relative h-64">
+                            <canvas id="carrierSpendChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Outage Frequency & Length -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 lg:col-span-2 border border-gray-100">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-lg font-semibold text-gray-800">Outage Frequency vs. Avg Duration (YTD)</h4>
+                            <select class="text-sm border-gray-300 rounded-md text-gray-500 focus:ring-boeing-blue">
+                                <option>By Carrier</option>
+                                <option>By Region</option>
+                            </select>
+                        </div>
+                        <div class="relative h-64">
+                            <canvas id="outageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Outages & SLAs -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Data Table: Recent Outages (Takes up 2/3 space) -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden lg:col-span-2">
+                        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h4 class="text-lg font-semibold text-gray-800">Recent Critical Outages log</h4>
+                            <button class="text-boeing-lightblue text-sm font-medium hover:underline">View All Reports</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-white text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+                                        <th class="px-6 py-3 font-medium">Incident ID</th>
+                                        <th class="px-6 py-3 font-medium">Site/Location</th>
+                                        <th class="px-6 py-3 font-medium">Carrier</th>
+                                        <th class="px-6 py-3 font-medium">Issue Type</th>
+                                        <th class="px-6 py-3 font-medium">Duration</th>
+                                        <th class="px-6 py-3 font-medium">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-sm text-gray-700 divide-y divide-gray-100">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium text-boeing-lightblue cursor-pointer">INC0098412</td>
+                                        <td class="px-6 py-4">Everett Assembly Plant</td>
+                                        <td class="px-6 py-4">AT&T</td>
+                                        <td class="px-6 py-4">Fiber Cut</td>
+                                        <td class="px-6 py-4 text-red-500 font-medium">Ongoing (5h 12m)</td>
+                                        <td class="px-6 py-4"><span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">Open</span></td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium text-boeing-lightblue cursor-pointer">INC0098399</td>
+                                        <td class="px-6 py-4">Renton Factory</td>
+                                        <td class="px-6 py-4">Verizon</td>
+                                        <td class="px-6 py-4">BGP Routing</td>
+                                        <td class="px-6 py-4">1h 45m</td>
+                                        <td class="px-6 py-4"><span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">Resolved</span></td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium text-boeing-lightblue cursor-pointer">INC0098250</td>
+                                        <td class="px-6 py-4">Charleston Campus</td>
+                                        <td class="px-6 py-4">CenturyLink</td>
+                                        <td class="px-6 py-4">Hardware Fail</td>
+                                        <td class="px-6 py-4">4h 20m</td>
+                                        <td class="px-6 py-4"><span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">Resolved</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Vendor SLA Compliance Widget (Takes up 1/3 space) -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden lg:col-span-1 flex flex-col">
+                        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+                            <h4 class="text-lg font-semibold text-gray-800">Carrier SLA Compliance</h4>
+                            <p class="text-xs text-gray-500">Target: 99.9% Uptime</p>
+                        </div>
+                        <div class="p-6 flex-1 flex flex-col justify-center space-y-5">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="font-medium text-gray-700">Verizon</span>
+                                    <span class="text-green-600 font-bold">99.95%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-500 h-2 rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="font-medium text-gray-700">CenturyLink</span>
+                                    <span class="text-yellow-600 font-bold">99.82%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-yellow-400 h-2 rounded-full" style="width: 80%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="font-medium text-gray-700">AT&T</span>
+                                    <span class="text-red-500 font-bold">98.40% <i class="fa-solid fa-triangle-exclamation text-xs ml-1"></i></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-red-500 h-2 rounded-full" style="width: 45%"></div>
+                                </div>
+                                <p class="text-xs text-red-500 mt-1">Breach threshold met. Penalty applicable.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SERVICENOW ITSM TAB ==================== -->
+            <div id="itsm-tab" class="tab-content space-y-6">
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border-t-4 border-blue-500">
+                        <p class="text-sm font-medium text-gray-500 mb-1">Open Incidents</p>
+                        <h3 class="text-3xl font-bold text-gray-800">412</h3>
+                        <p class="text-xs text-red-500 mt-2 flex items-center"><i class="fa-solid fa-arrow-up mr-1"></i> 5% vs last week</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 border-t-4 border-yellow-500">
+                        <p class="text-sm font-medium text-gray-500 mb-1">Open Problems (RCA pending)</p>
+                        <h3 class="text-3xl font-bold text-gray-800">28</h3>
+                        <p class="text-xs text-gray-500 mt-2">Avg age: 14 days</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 border-t-4 border-purple-500">
+                        <p class="text-sm font-medium text-gray-500 mb-1">Pending Changes (CAB)</p>
+                        <h3 class="text-3xl font-bold text-gray-800">85</h3>
+                        <p class="text-xs text-green-600 mt-2">12 High Risk</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 border-t-4 border-green-500">
+                        <p class="text-sm font-medium text-gray-500 mb-1">First Contact Resolution</p>
+                        <h3 class="text-3xl font-bold text-gray-800">68%</h3>
+                        <p class="text-xs text-green-600 mt-2 flex items-center"><i class="fa-solid fa-arrow-up mr-1"></i> 2% vs target (65%)</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Ticket Volume Trend -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-4">Ticket Volume Trend (Last 30 Days)</h4>
+                        <div class="relative h-72">
+                            <canvas id="ticketTrendChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Backlog by Assignment Group -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-4">Incident Backlog by Priority & Group</h4>
+                        <div class="relative h-72">
+                            <canvas id="backlogChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== PROJECTS TAB ==================== -->
+            <div id="projects-tab" class="tab-content space-y-6">
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 flex items-center space-x-4">
+                        <div class="p-4 bg-blue-50 rounded-full text-boeing-blue text-2xl">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Active Concurrent Projects</p>
+                            <h3 class="text-3xl font-bold text-gray-800">45</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 flex items-center space-x-4">
+                        <div class="p-4 bg-red-50 rounded-full text-red-500 text-2xl">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Projects Behind Schedule</p>
+                            <h3 class="text-3xl font-bold text-gray-800">8</h3>
+                            <p class="text-xs text-red-500">Requires exec intervention</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 flex items-center space-x-4">
+                        <div class="p-4 bg-purple-50 rounded-full text-purple-600 text-2xl">
+                            <i class="fa-solid fa-users-gear"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Resource Utilization</p>
+                            <h3 class="text-3xl font-bold text-gray-800">92%</h3>
+                            <p class="text-xs text-yellow-600">Approaching burnout risk (Target < 85%)</p>
+                        </div>
+                    </div>
+                    <!-- New Budget Variance Card -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 flex items-center space-x-4 border-l-4 border-green-500">
+                        <div class="p-4 bg-green-50 rounded-full text-green-600 text-2xl">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Portfolio Budget</p>
+                            <h3 class="text-3xl font-bold text-gray-800">-$245k</h3>
+                            <p class="text-xs text-green-600">Under budget (Favorable)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects Timeline / Gantt Summary -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-6">Key Strategic Projects Pipeline</h4>
+                    
+                    <div class="space-y-6">
+                        <!-- Project 1 -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <h5 class="font-bold text-gray-800">SD-WAN Global Migration Phase 2</h5>
+                                    <p class="text-xs text-gray-500">PM: Sarah Jenkins | Sponsor: NIS VP</p>
+                                </div>
+                                <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-bold">On Track</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-1">
+                                <div class="bg-green-500 h-2.5 rounded-full" style="width: 65%"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-500">
+                                <span>Progress: 65%</span>
+                                <span>Est. Completion: Q4 2026</span>
+                            </div>
+                            <div class="mt-2 text-sm text-gray-600 flex space-x-4 bg-gray-50 p-2 rounded">
+                                <span><i class="fa-solid fa-user-clock text-gray-400 mr-1"></i> 1,200 hrs committed</span>
+                                <span class="text-red-500"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 2 Open Blockers (Hardware lead times)</span>
+                            </div>
+                        </div>
+
+                        <!-- Project 2 -->
+                        <div class="pt-4 border-t border-gray-100">
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <h5 class="font-bold text-gray-800">Campus Core Network Refresh (Everett)</h5>
+                                    <p class="text-xs text-gray-500">PM: Michael Chang | Sponsor: Mfg Ops</p>
+                                </div>
+                                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-bold">At Risk</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-1">
+                                <div class="bg-yellow-400 h-2.5 rounded-full" style="width: 40%"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-500">
+                                <span>Progress: 40% (Planned: 55%)</span>
+                                <span>Est. Completion: Q1 2027</span>
+                            </div>
+                            <div class="mt-2 text-sm text-gray-600 flex space-x-4 bg-gray-50 p-2 rounded">
+                                <span><i class="fa-solid fa-user-clock text-gray-400 mr-1"></i> 850 hrs committed</span>
+                                <span class="text-yellow-600"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Resource contention with SD-WAN project</span>
+                            </div>
+                        </div>
+
+                         <!-- Project 3 -->
+                         <div class="pt-4 border-t border-gray-100">
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <h5 class="font-bold text-gray-800">5G Private Network Pilot (Charleston)</h5>
+                                    <p class="text-xs text-gray-500">PM: David Thorne | Sponsor: Innovation Lab</p>
+                                </div>
+                                <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-bold">Delayed</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-1">
+                                <div class="bg-red-500 h-2.5 rounded-full" style="width: 15%"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-500">
+                                <span>Progress: 15%</span>
+                                <span class="text-red-500">Missed Milestone: Vendor Selection</span>
+                            </div>
+                            <div class="mt-2 text-sm text-gray-600 flex space-x-4 bg-gray-50 p-2 rounded">
+                                <span><i class="fa-solid fa-user-clock text-gray-400 mr-1"></i> 300 hrs committed</span>
+                                <span class="text-red-600"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Legal hold on vendor MSA</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resource Allocation Chart -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4">NIS Staff Resource Allocation by Project Category</h4>
+                    <div class="relative h-64">
+                        <canvas id="resourceChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // --- Navigation Logic ---
+        function switchTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Reset button styles
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('bg-blue-800', 'text-white');
+                btn.classList.add('hover:bg-blue-800', 'text-blue-100');
+            });
+
+            // Show selected tab
+            document.getElementById(tabId).classList.add('active');
+            
+            // Highlight active button
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            activeBtn.classList.remove('hover:bg-blue-800', 'text-blue-100');
+            activeBtn.classList.add('bg-blue-800', 'text-white');
+
+            // Update Header Title
+            const titles = {
+                'wan-tab': 'WAN Services & Outage Dashboard',
+                'itsm-tab': 'ServiceNow ITSM Metrics',
+                'projects-tab': 'Project Portfolio & Resources'
+            };
+            document.getElementById('current-tab-title').innerText = titles[tabId];
+
+            // Re-render charts to fix sizing issues when unhidden
+            Chart.helpers.each(Chart.instances, function(instance){
+                instance.resize();
+            });
+        }
+
+        // --- Chart Configuration Variables ---
+        const boeingBlue = '#0033A0';
+        const boeingLightBlue = '#0055B8';
+        const grayColor = '#E6E9EB';
+        
+        Chart.defaults.font.family = 'Inter, sans-serif';
+        Chart.defaults.color = '#6b7280';
+        Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(17, 24, 39, 0.9)';
+        Chart.defaults.plugins.tooltip.padding = 10;
+        Chart.defaults.plugins.tooltip.cornerRadius = 4;
+
+        // --- WAN Tab Charts ---
+        
+        // 1. Spend by Carrier (Doughnut)
+        const ctxCarrier = document.getElementById('carrierSpendChart').getContext('2d');
+        new Chart(ctxCarrier, {
+            type: 'doughnut',
+            data: {
+                labels: ['AT&T ($1.8M)', 'Verizon ($1.2M)', 'CenturyLink ($0.8M)', 'Other ($0.4M)'],
+                datasets: [{
+                    data: [1.8, 1.2, 0.8, 0.4],
+                    backgroundColor: [boeingBlue, boeingLightBlue, '#60a5fa', '#93c5fd'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8 } }
+                }
+            }
+        });
+
+        // 2. Outage Frequency vs Duration (Bubble/Scatter)
+        const ctxOutage = document.getElementById('outageChart').getContext('2d');
+        new Chart(ctxOutage, {
+            type: 'bar',
+            data: {
+                labels: ['AT&T', 'Verizon', 'CenturyLink', 'Zayo', 'Comcast'],
+                datasets: [
+                    {
+                        label: 'Number of Outages YTD',
+                        data: [24, 18, 12, 8, 5],
+                        backgroundColor: boeingLightBlue,
+                        yAxisID: 'y',
+                        order: 2
+                    },
+                    {
+                        label: 'Avg MTTR (Hours)',
+                        type: 'line',
+                        data: [3.2, 4.5, 2.8, 6.1, 2.0],
+                        borderColor: '#ef4444',
+                        backgroundColor: '#ef4444',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        yAxisID: 'y1',
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        position: 'left',
+                        title: { display: true, text: 'Frequency (Count)' }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        title: { display: true, text: 'MTTR (Hours)' }
+                    }
+                }
+            }
+        });
+
+        // --- ITSM Tab Charts ---
+
+        // 3. Ticket Trend (Line)
+        const ctxTrend = document.getElementById('ticketTrendChart').getContext('2d');
+        new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [
+                    {
+                        label: 'Opened Incidents',
+                        data: [350, 420, 380, 450],
+                        borderColor: '#ef4444', // Red for issues arriving
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Resolved Incidents',
+                        data: [320, 390, 400, 410],
+                        borderColor: '#22c55e', // Green for fixed
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+
+        // 4. Backlog by Group (Stacked Bar)
+        const ctxBacklog = document.getElementById('backlogChart').getContext('2d');
+        new Chart(ctxBacklog, {
+            type: 'bar',
+            data: {
+                labels: ['Network Core', 'Network Edge', 'Voice/UC', 'Security/Firewall'],
+                datasets: [
+                    { label: 'P1/P2 Critical', data: [5, 2, 0, 4], backgroundColor: '#ef4444' },
+                    { label: 'P3 High', data: [15, 25, 10, 12], backgroundColor: '#f59e0b' },
+                    { label: 'P4 Low', data: [45, 80, 35, 20], backgroundColor: '#3b82f6' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true }
+                }
+            }
+        });
+
+        // --- Projects Tab Charts ---
+
+        // 5. Resource Allocation (Horizontal Bar)
+        const ctxResource = document.getElementById('resourceChart').getContext('2d');
+        new Chart(ctxResource, {
+            type: 'bar',
+            data: {
+                labels: ['Infrastructure Refresh', 'Cloud Migration', 'Security Hardening', 'M&A Integrations', 'BAU / Maintenance'],
+                datasets: [{
+                    label: 'FTE Hours Committed (Monthly)',
+                    data: [3200, 2400, 1800, 900, 4500],
+                    backgroundColor: boeingLightBlue,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Makes it horizontal
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Hours' }
+                    }
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
